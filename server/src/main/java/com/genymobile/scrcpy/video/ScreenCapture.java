@@ -1,7 +1,6 @@
 package com.genymobile.scrcpy.video;
 
 import com.genymobile.scrcpy.control.PositionMapper;
-import com.genymobile.scrcpy.device.Device;
 import com.genymobile.scrcpy.device.DisplayInfo;
 import com.genymobile.scrcpy.device.Size;
 import com.genymobile.scrcpy.util.Ln;
@@ -19,8 +18,7 @@ import android.view.Surface;
 
 public class ScreenCapture extends SurfaceCapture {
 
-    private final Device device;
-
+    private final VirtualDisplayListener vdListener;
     private final int displayId;
     private int maxSize;
     private final Rect crop;
@@ -35,8 +33,8 @@ public class ScreenCapture extends SurfaceCapture {
     private IRotationWatcher rotationWatcher;
     private IDisplayFoldListener displayFoldListener;
 
-    public ScreenCapture(Device device, int displayId, int maxSize, Rect crop, int lockVideoOrientation) {
-        this.device = device;
+    public ScreenCapture(VirtualDisplayListener vdListener, int displayId, int maxSize, Rect crop, int lockVideoOrientation) {
+        this.vdListener = vdListener;
         this.displayId = displayId;
         this.maxSize = maxSize;
         this.crop = crop;
@@ -123,8 +121,10 @@ public class ScreenCapture extends SurfaceCapture {
             }
         }
 
-        PositionMapper positionMapper = PositionMapper.from(screenInfo);
-        device.setPositionMapper(positionMapper);
+        if (vdListener != null) {
+            PositionMapper positionMapper = PositionMapper.from(screenInfo);
+            vdListener.onNewVirtualDisplay(positionMapper);
+        }
     }
 
     @Override
