@@ -255,6 +255,11 @@ sc_display_update_texture_internal(struct sc_display *display,
         SDL_SetYUVConversionMode(sdl_color_range);
     }
 
+    for (int i = 0; i < frame->linesize[0]; i++) {
+        frame->data[0][i] = (Uint8)((float)(frame->data[0][i]) * 0.4);
+        frame->data[2][i] = (Uint8)((float)(frame->data[2][i]) * 0.4);
+    }
+
     int ret = SDL_UpdateYUVTexture(display->texture, NULL,
                                    frame->data[0], frame->linesize[0],
                                    frame->data[1], frame->linesize[1],
