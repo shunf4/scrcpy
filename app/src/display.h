@@ -54,7 +54,7 @@ enum sc_display_result
 sc_display_set_texture_size(struct sc_display *display, struct sc_size size);
 
 enum sc_display_result
-sc_display_update_texture(struct sc_display *display, const AVFrame *frame);
+sc_display_update_texture(struct sc_display *display, AVFrame *frame);
 
 enum sc_display_result
 sc_display_render(struct sc_display *display, const SDL_Rect *geometry,

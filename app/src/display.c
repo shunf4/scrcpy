@@ -123,6 +123,9 @@ sc_display_destroy(struct sc_display *display) {
     SDL_DestroyRenderer(display->renderer);
 }
 
+static int twidth;
+static int theight; 
+
 static SDL_Texture *
 sc_display_create_texture(struct sc_display *display,
                           struct sc_size size) {
@@ -130,6 +133,8 @@ sc_display_create_texture(struct sc_display *display,
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YV12,
                                              SDL_TEXTUREACCESS_STREAMING,
                                              size.width, size.height);
+
+	twidth=size.width; theight=size.height;
     if (!texture) {
         LOGD("Could not create texture: %s", SDL_GetError());
         return NULL;
@@ -244,7 +249,7 @@ sc_display_to_sdl_color_range(enum AVColorRange color_range) {
 
 static bool
 sc_display_update_texture_internal(struct sc_display *display,
-                                   const AVFrame *frame) {
+                                   AVFrame *frame) {
     if (!display->has_frame) {
         // First frame
         display->has_frame = true;
@@ -254,16 +259,35 @@ sc_display_update_texture_internal(struct sc_display *display,
             sc_display_to_sdl_color_range(frame->color_range);
         SDL_SetYUVConversionMode(sdl_color_range);
     }
+    static Uint8 y[4608000] = { 0 };
+    static Uint8 u[4608000] = { 0 };
+    static Uint8 v[4608000] = { 0 };
 
-    for (int i = 0; i < frame->linesize[0]; i++) {
-        frame->data[0][i] = (Uint8)((float)(frame->data[0][i]) * 0.4);
-        frame->data[2][i] = (Uint8)((float)(frame->data[2][i]) * 0.4);
+    // https://stackoverflow.com/questions/64717098/avframe-buf-size-calculation
+    // only for yuv422
+    memcpy(y, frame->data[0], frame->linesize[0] * theight);
+    memcpy(u, frame->data[1], frame->linesize[1] * theight / 2);
+    memcpy(v, frame->data[2], frame->linesize[2] * theight / 2);
+
+    for (int i = 0; i < frame->linesize[0] * theight; i++) {
+	// y[i] = (Uint8)((float)(u[i] - 128) * 0.265) + 128;
+	// if (y[i] < (235 - 14)) y[i] = y[i] + 14;
+        // if (y[i] > 55) y[i] = y[i] - 55;
+        if (y[i] > 11) y[i] = y[i] - 11;
     }
 
+    for (int i = 0; i < frame->linesize[1] * theight; i++) {
+        u[i] = (Uint8)((float)(u[i] - 128) * 0.135) + 128;
+    }
+    for (int i = 0; i < frame->linesize[2] * theight; i++) {
+        v[i] = (Uint8)((float)(v[i] - 128) * 0.135) + 128;
+    }
+    // LOGI("Updating Texture %d %d %d    %d", frame->linesize[0], frame->linesize[1], frame->linesize[2], theight);
+
     int ret = SDL_UpdateYUVTexture(display->texture, NULL,
-                                   frame->data[0], frame->linesize[0],
-                                   frame->data[1], frame->linesize[1],
-                                   frame->data[2], frame->linesize[2]);
+                                   y, frame->linesize[0],
+                                   u, frame->linesize[1],
+                                   v, frame->linesize[2]);
     if (ret) {
         LOGD("Could not update texture: %s", SDL_GetError());
         return false;
@@ -279,7 +303,7 @@ sc_display_update_texture_internal(struct sc_display *display,
 }
 
 enum sc_display_result
-sc_display_update_texture(struct sc_display *display, const AVFrame *frame) {
+sc_display_update_texture(struct sc_display *display, AVFrame *frame) {
     bool ok = sc_display_update_texture_internal(display, frame);
     if (!ok) {
         ok = sc_display_set_pending_frame(display, frame);
