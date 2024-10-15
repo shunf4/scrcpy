@@ -75,8 +75,6 @@ main_scrcpy(int argc, char *argv[]) {
     av_register_all();
 #endif
 
-    avfilter_register_all();
-
 #ifdef HAVE_V4L2
     if (args.opts.v4l2_device) {
         avdevice_register_all();
