@@ -47,7 +47,7 @@ release: clean test build-server zip-win32 zip-win64
 	@echo "Release generated in $(RELEASE_DIR)/"
 
 clean:
-	$(GRADLE) clean
+	# $(GRADLE) clean
 	rm -rf "$(DIST)" "$(TEST_BUILD_DIR)" "$(SERVER_BUILD_DIR)" \
 		"$(WIN32_BUILD_DIR)" "$(WIN64_BUILD_DIR)"
 
